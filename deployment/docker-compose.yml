@@ -1,1 +1,37 @@
+services:
+  # 1. The RAG Ingestor (Backend Task)
+  # Runs the Python script to feed ChromaDB. 
+  # Doesn't need external access, just needs to talk to Chroma/Ollama.
+  rag-ingestor:
+    build: ../apps/rag-ingestor
+    container_name: rag-ingestor
+    environment:
+      - CHROMA_HOST=chromadb # Assumes Chroma is in this stack or accessible
+      - CHROMA_PORT=8000
+    volumes:
+      - ./my-docs:/data/docs
+    networks:
+      - ai_net
 
+  # 2. The Inventory App (Frontend)
+  # This is the app we want to expose via Cloudflare.
+  inventory-app:
+    build: ../apps/inventory-prototype
+    container_name: inventory-app # Critical: Use this name in Cloudflare Dashboard
+    ports:
+      - "8501:8501" # Optional: Only needed if you want local LAN access
+    restart: unless-stopped
+    networks:
+      - ai_net
+      - cloudflare_net # This must match the network name of your main Tunnel container
+
+networks:
+  # Internal network for your AI tools to talk to each other
+  ai_net:
+    driver: bridge
+  
+  # The EXISTING network where your 'cloudflared' container lives on the NAS.
+  # Check your main stack for the name (often 'proxynet', 'cloudflare_net' or 'web')
+  cloudflare_net:
+    external: true 
+    name: cloudflare_tunnel_net # UPDATE THIS to your actual tunnel network name
