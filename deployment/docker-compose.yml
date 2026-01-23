@@ -1,37 +1,46 @@
 services:
-  # 1. The RAG Ingestor (Backend Task)
-  # Runs the Python script to feed ChromaDB. 
-  # Doesn't need external access, just needs to talk to Chroma/Ollama.
+  # 1. The RAG Ingestor (Worker)
   rag-ingestor:
     build: ../apps/rag-ingestor
     container_name: rag-ingestor
     environment:
-      - CHROMA_HOST=chromadb # Assumes Chroma is in this stack or accessible
+      - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
+      # We point Ollama to your Mac's localhost (via host.docker.internal)
+      # so it tries to reach an Ollama instance if you have one, or fails gracefully later.
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     volumes:
       - ./my-docs:/data/docs
     networks:
       - ai_net
+    depends_on:
+      - chromadb
 
   # 2. The Inventory App (Frontend)
-  # This is the app we want to expose via Cloudflare.
   inventory-app:
     build: ../apps/inventory-prototype
-    container_name: inventory-app # Critical: Use this name in Cloudflare Dashboard
+    container_name: inventory-app
     ports:
-      - "8501:8501" # Optional: Only needed if you want local LAN access
+      - "8501:8501"
     restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Mounts YOUR Mac's Docker socket
     networks:
       - ai_net
-      - cloudflare_net # This must match the network name of your main Tunnel container
+      - cloudflare_net
+
+  # 3. Local Vector DB (Added for Mac testing!)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    ports:
+      - "8000:8000"
+    networks:
+      - ai_net
 
 networks:
-  # Internal network for your AI tools to talk to each other
   ai_net:
     driver: bridge
-  
-  # The EXISTING network where your 'cloudflared' container lives on the NAS.
-  # Check your main stack for the name (often 'proxynet', 'cloudflare_net' or 'web')
   cloudflare_net:
-    external: true 
-    name: cloudflare_tunnel_net # UPDATE THIS to your actual tunnel network name
+    external: true
+    name: cloudflare_tunnel_net
