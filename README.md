@@ -1,6 +1,8 @@
 # ⚡ AI-Accelerated Engineering Labs
 
 > **Experimentation Log:** Exploring the efficacy of LLM-integrated development environments (Cursor, Antigravity) in reducing Time-to-MVP for internal tooling.
+>
+> [![Mend Bolt](https://img.shields.io/badge/Mend%20Bolt-Scanned-blue)](https://github.com/marketplace/mend-bolt)
 
 ## 🎯 Purpose
 This repository serves as a monorepo for utility applications and proofs-of-concept built using an **AI-First** workflow.
